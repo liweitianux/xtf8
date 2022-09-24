@@ -51,6 +51,8 @@
 #define XTF8_PUA_END    0xEFFF
 
 
+#ifndef NDEBUG
+
 /*
  * Verify whether the given $data of length $len is valid UTF-8 sequence.
  */
@@ -71,6 +73,8 @@ is_utf8(void *data, size_t len)
 
     return state == UTF8_ACCEPT;
 }
+
+#endif
 
 
 uintptr_t

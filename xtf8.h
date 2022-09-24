@@ -36,6 +36,9 @@ enum {
     XTF8_ERR_ABORT, /* terminate the encoding process */
 };
 
+/* Error return codes */
+#define XTF8_ABORTED    ((uintptr_t)-1)
+
 
 /*
  * Encode the given data in $src of length $len, place the result in

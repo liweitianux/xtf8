@@ -97,7 +97,7 @@ xtf8_encode(void *dst, void *src, size_t len, int error)
             if (codepoint >= XTF8_PUA_START && codepoint <= XTF8_PUA_END) {
                 /* Found a collision! */
                 if (error == XTF8_ERR_ABORT)
-                    return (uintptr_t)-1;
+                    return XTF8_ABORTED;
 
                 /* Replace with the Unicode Replacement Character. */
                 codepoint = 0xFFFD; /* UTF-8: <EF BF BD> */
@@ -216,7 +216,7 @@ xtf8_decode(void *dst, void *src, size_t len, int error)
         case UTF8_REJECT:
             /* Invalid UTF-8 sequence! */
             if (error == XTF8_ERR_ABORT)
-                return (uintptr_t)-1;
+                return XTF8_ABORTED;
 
             s_cur = UTF8_ACCEPT;
             if (s_prev != UTF8_ACCEPT)

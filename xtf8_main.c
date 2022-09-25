@@ -310,7 +310,7 @@ read_file(FILE *fp, size_t *size)
     size_t n, sz, buf_size, tmp_size;
 
     buf = tmp = NULL;
-    buf_size = tmp_size = sz = 0;
+    buf_size = sz = 0;
 
     do {
         if (sz + block_size > buf_size) {
@@ -423,7 +423,6 @@ main(int argc, char *argv[])
     infp = outfp = NULL;
     debug = decode = escape = hex = false;
     input = output = NULL;
-    inlen = outlen = 0;
     xtf8_err = XTF8_ERR_REPLACE;
     f_xtf8 = xtf8_encode;
 

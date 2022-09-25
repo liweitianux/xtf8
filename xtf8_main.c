@@ -85,6 +85,100 @@ hexdump(FILE *fp, void *data, size_t len)
 
 
 /*
+ * Escape the given UTF-8 string to be a valid JSON string.
+ * (RFC 8259, Section 7)
+ *
+ * Credit: Nginx: src/core/ngx_string.c: ngx_escape_json()
+ */
+static uintptr_t
+json_escape(void *dst, void *src, size_t len)
+{
+    uint8_t ch;
+    uint8_t *d, *s, *end;
+    size_t sz;
+
+    d = dst;
+    s = src;
+    end = (uint8_t *)src + len;
+    sz = 0;
+
+    if (d == NULL) {
+        /* determine the escaped string length */
+
+        while (s < end) {
+            ch = *s++;
+
+            if (ch <= 0x1F) {
+                /* escape control characters */
+                sz++;
+                switch (ch) {
+                case '\n':
+                case '\r':
+                case '\t':
+                case '\b':
+                case '\f':
+                    sz++;
+                    break;
+                default:
+                    sz += sizeof("\\u00XX") - 2;
+                }
+
+            } else {
+                if (ch == '\\' || ch == '"') {
+                    /* escape reverse solidus (\) and quotation mark (") */
+                    sz++;
+                }
+                sz++;
+            }
+        }
+
+        return (uintptr_t)sz;
+    }
+
+    while (s < end) {
+        ch = *s++;
+
+        if (ch <= 0x1F) {
+            *d++ = '\\';
+
+            switch (ch) {
+            case '\n':
+                *d++ = 'n';
+                break;
+            case '\r':
+                *d++ = 'r';
+                break;
+            case '\t':
+                *d++ = 't';
+                break;
+            case '\b':
+                *d++ = 'b';
+                break;
+            case '\f':
+                *d++ = 'f';
+                break;
+
+            default: /* u00XX */
+                *d++ = 'u';
+                *d++ = '0';
+                *d++ = '0';
+                *d++ = '0' + (ch >> 4);
+                ch &= 0xF;
+                *d++ = (ch < 10) ? ('0' + ch) : ('A' + ch - 10);
+            }
+
+        } else {
+            if (ch == '\\' || ch == '"')
+                *d++ = '\\';
+            *d++ = ch;
+        }
+    }
+
+    return (uintptr_t)d;
+}
+
+
+/*
  * Read from the given file $fp until EOF, and return the data,
  * with data length save in $size.
  *
@@ -186,6 +280,7 @@ usage(void)
           "    -d : decode mode instead of encode\n"
           "    -i : input file (stdin if unspecified)\n"
           "    -o : output file (stdout if unspecified)\n"
+          "    -j : JSON escape the output\n"
           "    -x : hexdump the output\n"
           "    -D : show verbose debug messages\n"
           "\n",
@@ -199,22 +294,22 @@ int
 main(int argc, char *argv[])
 {
     const char *infile, *outfile;
-    unsigned char *input, *output;
+    void *input, *output;
     size_t inlen, outlen;
     FILE *infp, *outfp;
-    bool debug, decode, hex;
+    bool debug, decode, escape, hex;
     int xtf8_err, opt;
     uintptr_t (*f_xtf8)(void *, void *, size_t, int);
 
     infile = outfile = NULL;
     infp = outfp = NULL;
-    debug = decode = hex = false;
+    debug = decode = escape = hex = false;
     input = output = NULL;
     inlen = outlen = 0;
     xtf8_err = XTF8_ERR_REPLACE;
     f_xtf8 = xtf8_encode;
 
-    while ((opt = getopt(argc, argv, "Ddhi:o:x")) != -1) {
+    while ((opt = getopt(argc, argv, "Ddhi:jo:x")) != -1) {
         switch (opt) {
         case 'D':
             debug = true;
@@ -225,6 +320,9 @@ main(int argc, char *argv[])
             break;
         case 'i':
             infile = optarg;
+            break;
+        case 'j':
+            escape = true;
             break;
         case 'o':
             outfile = optarg;
@@ -250,6 +348,7 @@ main(int argc, char *argv[])
         fprintf(stderr, "Mode: %s\n", decode ? "decode" : "encode");
         fprintf(stderr, "Input: %s\n", infile ? infile : "<stdin>");
         fprintf(stderr, "Output: %s\n", outfile ? outfile : "<stdout>");
+        fprintf(stderr, "JSON: %s\n", escape ?  "escape" : "(none)");
     }
 
     if (infile != NULL) {
@@ -286,9 +385,31 @@ main(int argc, char *argv[])
 
     (void)f_xtf8(output, input, inlen, xtf8_err);
 
-    if (debug && !hex) {
+    if (debug) {
         fprintf(stderr, "Output: (len=%zu)\n", outlen);
         hexdump(stderr, output, outlen);
+    }
+
+    if (escape && !decode) {
+        /* JSON escape encoded output. */
+        void *jbuf;
+        size_t jlen;
+
+        jlen = (size_t)json_escape(NULL, output, outlen);
+        jbuf = calloc(1, jlen);
+        if (jbuf == NULL)
+            err(1, "failed to allocate JSON buffer");
+
+        (void)json_escape(jbuf, output, outlen);
+
+        free(output);
+        output = jbuf;
+        outlen = jlen;
+
+        if (debug) {
+            fprintf(stderr, "JSON-escaped output: (len=%zu)\n", outlen);
+            hexdump(stderr, output, outlen);
+        }
     }
 
     if (hex)

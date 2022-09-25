@@ -178,6 +178,124 @@ json_escape(void *dst, void *src, size_t len)
 }
 
 
+#define JSON_ERR_UNESCAPE   ((uintptr_t)-1)
+
+/*
+ * Unescape the given JSON string to its original UTF-8 string.
+ */
+static uintptr_t
+json_unescape(void *dst, void *src, size_t len)
+{
+    uint8_t *d, *s, *end;
+    size_t sz;
+    bool escape;
+
+    d = dst;
+    end = (uint8_t *)src + len;
+    sz = 0;
+    escape = false;
+
+    for (s = src; s < end; s++) {
+        if (escape) {
+            switch (*s) {
+            case '\\':
+                sz++;
+                if (d != NULL)
+                    *d++ = '\\';
+                break;
+            case '"':
+                sz++;
+                if (d != NULL)
+                    *d++ = '"';
+                break;
+
+            case 'n':
+                sz++;
+                if (d != NULL)
+                    *d++ = '\n';
+                break;
+            case 'r':
+                sz++;
+                if (d != NULL)
+                    *d++ = '\r';
+                break;
+            case 't':
+                sz++;
+                if (d != NULL)
+                    *d++ = '\t';
+                break;
+            case 'b':
+                sz++;
+                if (d != NULL)
+                    *d++ = '\b';
+                break;
+            case 'f':
+                sz++;
+                if (d != NULL)
+                    *d++ = '\f';
+                break;
+
+            case 'u': /* u00XX */
+            {
+                uint32_t codepoint;
+                int i, x, ch;
+
+                if (s + 5 >= end) {
+                    DPRINTF("truncated \\u00XX sequence");
+                    return JSON_ERR_UNESCAPE;
+                }
+                for (codepoint = 0, i = 1; i < 5; i++) {
+                    ch = *(s + i);
+                    if (ch >= '0' && ch <= '9') {
+                        x = ch - '0';
+                    } else if (ch >= 'A' && ch <= 'F') {
+                        x = ch - 'A' + 10;
+                    } else {
+                        DPRINTF("invalid xdigit in \\u00XX sequence: %.*s", 5, s);
+                        return JSON_ERR_UNESCAPE;
+                    }
+                    codepoint = (codepoint << 4) | x;
+                }
+                if (codepoint > 0x1F) {
+                    DPRINTF("out-of-range \\u00XX sequence: %.*s", 5, s);
+                    return JSON_ERR_UNESCAPE;
+                }
+                DPRINTF("unescaped \\%.*s to 0x%02X", 5, s, codepoint);
+                s += 4;
+
+                sz++;
+                if (d != NULL)
+                    *d++ = (uint8_t)codepoint;
+
+                break;
+            }
+
+            default:
+                DPRINTF("invalid escape sequence");
+                return JSON_ERR_UNESCAPE;
+            }
+
+            escape = false;
+
+        } else if (*s == '\\') {
+            escape = true;
+
+        } else {
+            sz++;
+            if (d != NULL)
+                *d++ = *s;
+        }
+    }
+
+    if (escape) {
+        DPRINTF("incomplete escape sequence");
+        return JSON_ERR_UNESCAPE;
+    }
+
+    return (d != NULL) ? (uintptr_t)d : (uintptr_t)sz;
+}
+
+
 /*
  * Read from the given file $fp until EOF, and return the data,
  * with data length save in $size.
@@ -278,9 +396,9 @@ usage(void)
           "\n"
           "options:\n"
           "    -d : decode mode instead of encode\n"
-          "    -i : input file (stdin if unspecified)\n"
-          "    -o : output file (stdout if unspecified)\n"
-          "    -j : JSON escape the output\n"
+          "    -i <infile> : input file (stdin if unspecified)\n"
+          "    -o <outfile> : output file (stdout if unspecified)\n"
+          "    -j : JSON escape the output (encode mode) or unescape the input (decode mode)\n"
           "    -x : hexdump the output\n"
           "    -D : show verbose debug messages\n"
           "\n",
@@ -348,7 +466,10 @@ main(int argc, char *argv[])
         fprintf(stderr, "Mode: %s\n", decode ? "decode" : "encode");
         fprintf(stderr, "Input: %s\n", infile ? infile : "<stdin>");
         fprintf(stderr, "Output: %s\n", outfile ? outfile : "<stdout>");
-        fprintf(stderr, "JSON: %s\n", escape ?  "escape" : "(none)");
+        fprintf(stderr, "JSON: %s\n",
+                escape ?
+                (decode ? "unescape input" : "escape output") :
+                "(none)");
     }
 
     if (infile != NULL) {
@@ -369,6 +490,31 @@ main(int argc, char *argv[])
     if (debug) {
         fprintf(stderr, "Input: (len=%zu)\n", inlen);
         hexdump(stderr, input, inlen);
+    }
+
+    if (escape && decode) {
+        /* JSON unescape input. */
+        void *jbuf;
+        size_t jlen;
+
+        jlen = (size_t)json_unescape(NULL, input, inlen);
+        if ((uintptr_t)jlen == JSON_ERR_UNESCAPE)
+            errx(1, "failed to unescape JSON string");
+
+        jbuf = calloc(1, jlen);
+        if (jbuf == NULL)
+            err(1, "failed to allocate JSON buffer");
+
+        (void)json_unescape(jbuf, input, inlen);
+
+        free(input);
+        input = jbuf;
+        inlen = jlen;
+
+        if (debug) {
+            fprintf(stderr, "JSON-unescaped input: (len=%zu)\n", inlen);
+            hexdump(stderr, input, inlen);
+        }
     }
 
     outlen = (size_t)f_xtf8(NULL, input, inlen, xtf8_err);

@@ -250,6 +250,9 @@ json_unescape(void *dst, void *src, size_t len)
                         x = ch - '0';
                     } else if (ch >= 'A' && ch <= 'F') {
                         x = ch - 'A' + 10;
+                    } else if (ch >= 'a' && ch <= 'f') {
+                        /* Accept lowercase, although unspecified in RFC 8259 */
+                        x = ch - 'a' + 10;
                     } else {
                         DPRINTF("invalid xdigit in \\u00XX sequence: %.*s", 5, s);
                         return JSON_ERR_UNESCAPE;

@@ -53,7 +53,7 @@ enum {
  * - XTF8_ERR_REPLACE: replace conflicting PUA characters with U+FFFD
  * - XTF8_ERR_ABORT: abort the encoding if found any conflicts
  */
-uintptr_t xtf8_encode(void *dst, void *src, size_t len, int error);
+uintptr_t xtf8_encode(void *dst, const void *src, size_t len, int error);
 
 /*
  * Decode the given data in $src of length $len, place the result in
@@ -69,7 +69,7 @@ uintptr_t xtf8_encode(void *dst, void *src, size_t len, int error);
  * - XTF8_ERR_REPLACE: replace invalid characters with U+FFFD
  * - XTF8_ERR_ABORT: abort the encoding if found any invalid sequences
  */
-uintptr_t xtf8_decode(void *dst, void *src, size_t len, int error);
+uintptr_t xtf8_decode(void *dst, const void *src, size_t len, int error);
 
 
 #endif

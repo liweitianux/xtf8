@@ -417,7 +417,7 @@ main(int argc, char *argv[])
     FILE *infp, *outfp;
     bool debug, decode, escape, hex;
     int xtf8_err, opt;
-    uintptr_t (*f_xtf8)(void *, void *, size_t, int);
+    uintptr_t (*f_xtf8)(void *, const void *, size_t, int);
 
     infile = outfile = NULL;
     infp = outfp = NULL;

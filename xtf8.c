@@ -78,10 +78,11 @@ is_utf8(void *data, size_t len)
 
 
 uintptr_t
-xtf8_encode(void *dst, void *src, size_t len, int error)
+xtf8_encode(void *dst, const void *src, size_t len, int error)
 {
     uint32_t s_prev, s_cur, codepoint;
-    uint8_t *d, *s, *pos, *end;
+    const uint8_t *s, *pos;
+    uint8_t *d, *end;
     size_t sz;
 
     s_prev = s_cur = UTF8_ACCEPT;
@@ -169,10 +170,11 @@ xtf8_encode(void *dst, void *src, size_t len, int error)
 
 
 uintptr_t
-xtf8_decode(void *dst, void *src, size_t len, int error)
+xtf8_decode(void *dst, const void *src, size_t len, int error)
 {
     uint32_t s_prev, s_cur, codepoint;
-    uint8_t v, *d, *s, *pos, *end;
+    const uint8_t *s, *pos;
+    uint8_t v, *d, *end;
     size_t sz;
 
     s_prev = s_cur = UTF8_ACCEPT;

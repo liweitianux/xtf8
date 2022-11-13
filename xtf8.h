@@ -47,7 +47,7 @@ enum {
  * The required output buffer size can be obtained by calling with
  * $dst = NULL.
  *
- * If error occurred, then return a value of (uintptr_t)-1.
+ * If error occurred, then return XTF8_ABORTED.
  *
  * The $error parameter specifies the error handling method:
  * - XTF8_ERR_REPLACE: replace conflicting PUA characters with U+FFFD
@@ -63,7 +63,7 @@ uintptr_t xtf8_encode(void *dst, const void *src, size_t len, int error);
  * $dst = NULL, but it's easier to just allocate a buffer of the same
  * size as the input.
  *
- * If error occurred, then return a value of (uintptr_t)-1.
+ * If error occurred, then return XTF8_ABORTED.
  *
  * The $error parameter specifies the error handling method:
  * - XTF8_ERR_REPLACE: replace invalid characters with U+FFFD

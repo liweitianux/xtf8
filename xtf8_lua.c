@@ -1,7 +1,7 @@
 /*-
  * SPDX-License-Identifier: MIT
  *
- * Copyright (c) 2022 Aaron LI
+ * Copyright (c) 2022-2023 Aaron LI
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files (the
@@ -48,6 +48,12 @@
 #include <lauxlib.h>
 
 #include "xtf8.h"
+
+/* NOTE: luaL_newlib() is available in Lua >=5.2 or LuaJIT >=2.1 */
+#ifndef luaL_newlib
+#define luaL_newlib(L, l) \
+        (lua_newtable(L), luaL_register(L, NULL, l))
+#endif
 
 
 static int
@@ -104,18 +110,15 @@ l_decode(lua_State *L)
 }
 
 
-static const struct luaL_Reg xtf8_funcs[] = {
-    { "encode", l_encode },
-    { "decode", l_decode },
-    { NULL, NULL },
-};
-
-
 int
 luaopen_xtf8(lua_State *L)
 {
-    /* NOTE: require Lua >=5.2 or LuaJIT >=2.1 */
-    luaL_newlib(L, xtf8_funcs);
+    static const struct luaL_Reg funcs[] = {
+        { "encode", l_encode },
+        { "decode", l_decode },
+        { NULL, NULL },
+    };
+    luaL_newlib(L, funcs);
 
     /* Error handlers */
     lua_pushinteger(L, XTF8_ERR_REPLACE);

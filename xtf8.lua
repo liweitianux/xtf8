@@ -1,7 +1,7 @@
 --[[
 -- SPDX-License-Identifier: MIT
 --
--- Copyright (c) 2022 Aaron LI
+-- Copyright (c) 2022-2023 Aaron LI
 --
 -- Permission is hereby granted, free of charge, to any person obtaining
 -- a copy of this software and associated documentation files (the
@@ -47,6 +47,37 @@ local ffi = require("ffi")
 local C = ffi.C
 
 
+-- Load library by searching 'package.cpath'.
+-- Credit: https://github.com/api7/lua-resty-radixtree (lib/resty/radixtree.lua)
+local function load_shared_lib(libname)
+    local cpath = package.cpath
+    local tried_paths = {}
+    local i = 1
+
+    for path in string.gmatch(cpath, "[^;]+") do
+        local fpath = string.match(path, "(.*/)")
+        fpath = fpath .. libname
+        -- The only way to know if a file exist is trying to open it.
+        local f = io.open(fpath)
+        if f then
+            io.close(f)
+            return ffi.load(fpath)
+        end
+        tried_paths[i] = fpath
+        i = i + 1
+    end
+
+    return nil, tried_paths
+end
+
+local libname = "libxtf8.so"
+local xtf8, tried_paths = load_shared_lib(libname)
+if not xtf8 then
+    error("cannot find library [" .. libname .. "] at paths:\n" ..
+          table.concat(tried_paths, "\n"))
+end
+
+
 ffi.cdef[[
 enum {
     XTF8_ERR_REPLACE, /* replace conflicting characters */
@@ -88,34 +119,34 @@ end
 
 
 local function xtf8_encode(data, err)
-    err = err or C.XTF8_ERR_REPLACE
-    local len = C.xtf8_encode(nil, data, #data, err)
+    err = err or xtf8.XTF8_ERR_REPLACE
+    local len = xtf8.xtf8_encode(nil, data, #data, err)
     if len == xtf8_aborted then
         return nil, "found invalid sequence"
     end
 
     local buf = get_buffer(len)
-    C.xtf8_encode(buf, data, #data, err)
+    xtf8.xtf8_encode(buf, data, #data, err)
     return ffi.string(buf, len)
 end
 
 
 local function xtf8_decode(data, err)
-    err = err or C.XTF8_ERR_REPLACE
-    local len = C.xtf8_decode(nil, data, #data, err)
+    err = err or xtf8.XTF8_ERR_REPLACE
+    local len = xtf8.xtf8_decode(nil, data, #data, err)
     if len == xtf8_aborted then
         return nil, "found invalid sequence"
     end
 
     local buf = get_buffer(len)
-    C.xtf8_decode(buf, data, #data, err)
+    xtf8.xtf8_decode(buf, data, #data, err)
     return ffi.string(buf, len)
 end
 
 
 local _M = {
-    ERR_REPLACE = C.XTF8_ERR_REPLACE,
-    ERR_ABORT   = C.XTF8_ERR_ABORT,
+    ERR_REPLACE = xtf8.XTF8_ERR_REPLACE,
+    ERR_ABORT   = xtf8.XTF8_ERR_ABORT,
 
     encode = xtf8_encode,
     decode = xtf8_decode,

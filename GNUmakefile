@@ -15,7 +15,7 @@ lib: libxtf8.so
 libxtf8.so: xtf8.c xtf8.h utf8.h
 	$(CC) $(CFLAGS) -o $@ $^
 
-lualib: CFLAGS+=-fPIC -shared -I$(LUA_INCLUDE)
+lualib: CFLAGS+=-fPIC -shared -I$(LUA_INCDIR)
 lualib: xtf8.so
 xtf8.so: xtf8_lua.c xtf8.c xtf8.h utf8.h
 	$(CC) $(CFLAGS) -o $@ $^

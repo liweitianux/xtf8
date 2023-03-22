@@ -113,7 +113,7 @@ xtf8_encode(void *dst, const void *src, size_t len, int error)
             } else {
                 /* Valid UTF-8 sequence, copy it. */
                 DPRINTF("U+%04X", codepoint);
-                sz += 1 + s - pos;
+                sz += (size_t)(1 + s - pos);
                 if (d != NULL) {
                     while (pos <= s)
                         *d++ = *pos++;
@@ -205,7 +205,7 @@ xtf8_decode(void *dst, const void *src, size_t len, int error)
             } else {
                 /* Valid UTF-8 sequence, copy it. */
                 DPRINTF("U+%04X", codepoint);
-                sz += 1 + s - pos;
+                sz += (size_t)(1 + s - pos);
                 if (d != NULL) {
                     while (pos <= s)
                         *d++ = *pos++;

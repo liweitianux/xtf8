@@ -238,7 +238,8 @@ json_unescape(void *dst, void *src, size_t len)
             case 'u': /* u00XX */
             {
                 uint32_t codepoint;
-                int i, x, ch;
+                uint8_t x, ch;
+                int i;
 
                 if (s + 5 >= end) {
                     DPRINTF("truncated \\u00XX sequence");

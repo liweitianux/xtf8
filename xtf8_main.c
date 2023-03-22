@@ -242,7 +242,7 @@ json_unescape(void *dst, void *src, size_t len)
                 int i;
 
                 if (s + 5 >= end) {
-                    DPRINTF("truncated \\u00XX sequence");
+                    DPRINTF("%s", "truncated \\u00XX sequence");
                     return JSON_ERR_UNESCAPE;
                 }
                 for (codepoint = 0, i = 1; i < 5; i++) {
@@ -275,7 +275,7 @@ json_unescape(void *dst, void *src, size_t len)
             }
 
             default:
-                DPRINTF("invalid escape sequence");
+                DPRINTF("%s", "invalid escape sequence");
                 return JSON_ERR_UNESCAPE;
             }
 
@@ -292,7 +292,7 @@ json_unescape(void *dst, void *src, size_t len)
     }
 
     if (escape) {
-        DPRINTF("incomplete escape sequence");
+        DPRINTF("%s", "incomplete escape sequence");
         return JSON_ERR_UNESCAPE;
     }
 

@@ -1,6 +1,6 @@
 all: xtf8 lib
 
-CFLAGS=	-g3 -O3 -std=gnu99 -pedantic -Wall -Wextra
+CFLAGS=	-g3 -O3 -std=c99 -pedantic -Wall -Wextra
 CFLAGS+=-Wshadow -Wundef -Wformat=2 -Wformat-truncation=2 -Wconversion
 CFLAGS+=-fno-common
 CFLAGS+=-DNDEBUG -D_POSIX_C_SOURCE=200112L
